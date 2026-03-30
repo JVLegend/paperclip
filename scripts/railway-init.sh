@@ -65,6 +65,10 @@ mkdir -p "${INSTANCE_DIR}"
 if [ ! -f "${INSTANCE_DIR}/config.json" ]; then
   echo "[railway-init] Writing config.json..."
   PUBLIC_URL="${PAPERCLIP_PUBLIC_URL:-https://jv-paperclip-production.up.railway.app}"
+  DB_MODE="embedded-postgres"
+  if [ -n "${DATABASE_URL}" ]; then
+    DB_MODE="postgres"
+  fi
   cat > "${INSTANCE_DIR}/config.json" << PAPERCLIPCONFIG
 {
   "\$meta": { "version": 1, "updatedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)", "source": "onboard" },
@@ -79,7 +83,8 @@ if [ ! -f "${INSTANCE_DIR}/config.json" ]; then
     "publicBaseUrl": "${PUBLIC_URL}"
   },
   "database": {
-    "mode": "embedded-postgres",
+    "mode": "${DB_MODE}",
+    "connectionString": "${DATABASE_URL:-}",
     "embeddedPostgresPort": 54329
   },
   "logging": {
