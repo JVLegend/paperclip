@@ -73,4 +73,8 @@ cat "${HERMES_HOME}/.env"
 echo ""
 echo "[hermes-gateway] SOUL.md exists: $(test -f ${HERMES_HOME}/SOUL.md && echo yes || echo no)"
 echo "[hermes-gateway] Starting Hermes gateway (verbose)..."
-exec hermes gateway run -v
+hermes gateway run -v 2>&1
+EXIT_CODE=$?
+echo "[hermes-gateway] Gateway exited with code ${EXIT_CODE}"
+echo "[hermes-gateway] Sleeping to prevent restart loop..."
+sleep 300
