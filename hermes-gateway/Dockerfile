@@ -7,6 +7,7 @@ RUN apt-get update \
 RUN pip install --no-cache-dir "git+https://github.com/NousResearch/hermes-agent.git@main" python-telegram-bot
 
 COPY entrypoint.sh /entrypoint.sh
+COPY skills/ /hermes-skills/
 RUN chmod +x /entrypoint.sh
 
 ENV HOME=/root

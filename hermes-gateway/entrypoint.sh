@@ -3,6 +3,14 @@ set -e
 
 HERMES_HOME="${HOME}/.hermes"
 mkdir -p "${HERMES_HOME}/skills/productivity/jv-superpersona"
+mkdir -p "${HERMES_HOME}/skills/productivity/paperclip-bridge"
+
+# Copy paperclip-bridge skill from Docker image
+if [ -d /hermes-skills/paperclip-bridge ]; then
+  cp /hermes-skills/paperclip-bridge/* "${HERMES_HOME}/skills/productivity/paperclip-bridge/"
+  chmod +x "${HERMES_HOME}/skills/productivity/paperclip-bridge/pcp.sh"
+  echo "[hermes-gateway] paperclip-bridge skill installed."
+fi
 
 echo "[hermes-gateway] Writing config..."
 cat > "${HERMES_HOME}/config.yaml" << HERMESCONFIG
@@ -30,6 +38,7 @@ delegation:
 skills:
   auto_load:
   - jv-superpersona
+  - paperclip-bridge
 platforms:
   telegram:
     enabled: true
@@ -51,6 +60,9 @@ HERMESCONFIG
 # Write .env for KIMI_API_KEY (hermes reads from ~/.hermes/.env)
 cat > "${HERMES_HOME}/.env" << ENVFILE
 KIMI_API_KEY=${KIMI_API_KEY}
+PAPERCLIP_API_URL=${PAPERCLIP_API_URL:-https://jv-paperclip-production.up.railway.app/api}
+PAPERCLIP_API_KEY=${PAPERCLIP_API_KEY:-pcp_board_setup_bc5dce235ce5166620bd3d15061636c87fa1be6a3d4298a6}
+PAPERCLIP_COMPANY_ID=${PAPERCLIP_COMPANY_ID:-6da87f11-6a27-4627-b101-924d5a161f6e}
 ENVFILE
 
 # SOUL.md — orchestrator persona (base64-encoded)
