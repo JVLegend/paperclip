@@ -30,6 +30,10 @@ delegation:
 skills:
   auto_load:
   - jv-superpersona
+platforms:
+  telegram:
+    enabled: true
+    token: "${TELEGRAM_BOT_TOKEN}"
 platform_toolsets:
   telegram:
   - browser
@@ -44,6 +48,11 @@ platform_toolsets:
 group_sessions_per_user: true
 HERMESCONFIG
 
+# Write .env for KIMI_API_KEY (hermes reads from ~/.hermes/.env)
+cat > "${HERMES_HOME}/.env" << ENVFILE
+KIMI_API_KEY=${KIMI_API_KEY}
+ENVFILE
+
 # SOUL.md — orchestrator persona (base64-encoded)
 if [ -n "${HERMES_SOUL_CONTENT}" ]; then
   echo "${HERMES_SOUL_CONTENT}" | base64 -d > "${HERMES_HOME}/SOUL.md"
@@ -56,13 +65,5 @@ if [ -n "${HERMES_SUPERPERSONA_CONTENT}" ]; then
   echo "${HERMES_SUPERPERSONA_CONTENT}" | base64 -d > "${HERMES_HOME}/skills/productivity/jv-superpersona/SKILL.md"
 fi
 
-# Write gateway config with Telegram bot token
-cat > "${HERMES_HOME}/gateway.yaml" << GWCONFIG
-telegram:
-  bot_token: "${TELEGRAM_BOT_TOKEN}"
-  allowed_users: []
-port: ${PORT:-8080}
-GWCONFIG
-
-echo "[hermes-gateway] Starting Hermes gateway on port ${PORT:-8080}..."
-exec hermes gateway run --config "${HERMES_HOME}/gateway.yaml"
+echo "[hermes-gateway] Starting Hermes gateway..."
+exec hermes gateway run
