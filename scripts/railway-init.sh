@@ -1,0 +1,73 @@
+#!/bin/bash
+set -e
+
+VAULT_DIR="/paperclip/vault/SuperJV"
+HERMES_HOME="${HOME}/.hermes"
+
+echo "[railway-init] Setting up Hermes config..."
+mkdir -p "${HERMES_HOME}/skills/productivity/jv-superpersona"
+
+# Write minimal Hermes config for agent execution (no gateway, just hermes chat)
+cat > "${HERMES_HOME}/config.yaml" << 'HERMESCONFIG'
+model:
+  default: kimi-k2.5
+  provider: kimi-coding
+  base_url: https://api.moonshot.ai/v1
+toolsets:
+- hermes-cli
+agent:
+  max_turns: 60
+  verbose: false
+terminal:
+  backend: local
+  cwd: .
+  timeout: 300
+  persistent_shell: false
+memory:
+  memory_enabled: false
+HERMESCONFIG
+
+# Write SOUL.md (base64-encoded env var)
+if [ -n "${HERMES_SOUL_CONTENT}" ]; then
+  echo "${HERMES_SOUL_CONTENT}" | base64 -d > "${HERMES_HOME}/SOUL.md"
+  echo "[railway-init] SOUL.md written."
+fi
+
+# Write jv-superpersona skill (base64-encoded env var)
+if [ -n "${HERMES_SUPERPERSONA_CONTENT}" ]; then
+  echo "${HERMES_SUPERPERSONA_CONTENT}" | base64 -d > "${HERMES_HOME}/skills/productivity/jv-superpersona/SKILL.md"
+  echo "[railway-init] jv-superpersona skill written."
+fi
+
+echo "[railway-init] Cloning/updating SuperJV vault..."
+if [ -d "${VAULT_DIR}/.git" ]; then
+  cd "${VAULT_DIR}" && git pull --quiet && echo "[railway-init] Vault updated."
+else
+  if [ -z "${GITHUB_TOKEN}" ]; then
+    echo "[railway-init] WARNING: GITHUB_TOKEN not set, skipping vault clone."
+  else
+    mkdir -p /paperclip/vault
+    git clone --depth=1 "https://x-access-token:${GITHUB_TOKEN}@github.com/JVLegend/SuperJV.git" "${VAULT_DIR}" \
+      && echo "[railway-init] Vault cloned."
+  fi
+fi
+
+echo "[railway-init] Starting Paperclip..."
+node --import ./server/node_modules/tsx/dist/loader.mjs server/dist/index.js &
+SERVER_PID=$!
+
+# Wait for embedded postgres + server to be ready, then bootstrap CEO if needed
+(
+  echo "[railway-init] Waiting for server to start..."
+  sleep 20
+  cd /app
+  EMBEDDED_DB="postgres://paperclip:paperclip@127.0.0.1:54329/paperclip"
+  BOOTSTRAP_OUT=$(DATABASE_URL="${EMBEDDED_DB}" \
+    PAPERCLIP_PUBLIC_URL="${PAPERCLIP_PUBLIC_URL:-https://jv-paperclip-production.up.railway.app}" \
+    PAPERCLIP_CONFIG="${PAPERCLIP_CONFIG}" \
+    node --import ./server/node_modules/tsx/dist/loader.mjs cli/src/index.ts auth bootstrap-ceo \
+    --db-url "${EMBEDDED_DB}" 2>&1)
+  echo "[railway-init] bootstrap-ceo: ${BOOTSTRAP_OUT}"
+) &
+
+wait $SERVER_PID
