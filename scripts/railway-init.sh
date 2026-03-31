@@ -19,7 +19,7 @@ cat > "${HERMES_HOME}/config.yaml" << 'HERMESCONFIG'
 model:
   default: kimi-k2.5
   provider: kimi-coding
-  base_url: https://api.moonshot.ai/v1
+  base_url: https://api.kimi.com/coding/v1
 toolsets:
 - hermes-cli
 agent:
@@ -33,6 +33,14 @@ terminal:
 memory:
   memory_enabled: false
 HERMESCONFIG
+
+# Write .env with KIMI_API_KEY for hermes agent execution
+if [ -n "${KIMI_API_KEY}" ]; then
+  cat > "${HERMES_HOME}/.env" << ENVFILE
+KIMI_API_KEY=${KIMI_API_KEY}
+ENVFILE
+  echo "[railway-init] KIMI_API_KEY written to .env"
+fi
 
 # Write SOUL.md (base64-encoded env var)
 if [ -n "${HERMES_SOUL_CONTENT}" ]; then
