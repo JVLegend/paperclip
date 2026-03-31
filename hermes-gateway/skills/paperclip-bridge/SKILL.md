@@ -135,6 +135,41 @@ Quando JV perguntar "o que está acontecendo?" ou "status":
 
 ---
 
+## Sistema de Learnings (Self-Improving Agent)
+
+Os agentes logam aprendizados, erros e feature requests no PostgreSQL do Railway. Isso cria memória institucional entre sessões.
+
+### Tipos de Learning
+| Tipo | Quando usar |
+|---|---|
+| `LRN` | Correção, insight, best practice, knowledge gap |
+| `ERR` | Falha de comando, API error, timeout, crash |
+| `FEAT` | Feature request, capacidade faltando |
+
+### Comandos via pcp
+```bash
+pcp learn-log LRN correction "Kimi precisa de api.kimi.com, não moonshot.ai"
+pcp learn-log ERR api_error "Timeout ao chamar Paperclip API"
+pcp learn-log FEAT feature "Dashboard de métricas dos agentes"
+pcp learn-list
+pcp learn-stats
+pcp learn-search "kimi"
+```
+
+### Para agentes dentro do container Paperclip
+```bash
+source /app/scripts/learnings.sh
+learn "Descobri que o CTO precisa de mais contexto sobre a infra"
+learn-error "API do Kimi retornou 429 rate limit"
+learn-feat "Integração com Google Calendar"
+learn-stats
+```
+
+### Promoção automática
+Quando um `pattern_key` atinge 3+ recorrências → candidato a promoção para SOUL.md ou AGENTS.md.
+
+---
+
 ## Notas Importantes
 
 - O `wakeup` é **assíncrono** — retorna um runId, não o resultado

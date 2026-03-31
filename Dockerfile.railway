@@ -54,8 +54,8 @@ RUN find /app/node_modules -name "execute.js" -path "*/hermes-paperclip-adapter*
 RUN mkdir -p /paperclip \
   && chown node:node /paperclip
 
-COPY --chown=node:node scripts/railway-init.sh scripts/create-board-key.mjs /app/scripts/
-RUN chmod +x /app/scripts/railway-init.sh
+COPY --chown=node:node scripts/railway-init.sh scripts/create-board-key.mjs scripts/learnings.mjs scripts/learnings.sh /app/scripts/
+RUN chmod +x /app/scripts/railway-init.sh /app/scripts/learnings.sh
 
 ENV NODE_ENV=production \
   HOME=/paperclip \

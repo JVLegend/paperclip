@@ -176,6 +176,63 @@ else:
       _pcp_curl -X POST "${PCP_API}/heartbeat-runs/${run_id}/cancel" | python3 -m json.tool 2>/dev/null
       ;;
 
+    # ── Learnings (self-improving agent) ──
+    learn-log)
+      # Log via API: wakeup SRE Monitor to log the learning
+      local type="${1:-LRN}"
+      local category="${2:-general}"
+      shift 2 2>/dev/null
+      local summary="$*"
+      if [ -z "$summary" ]; then
+        echo "Usage: pcp learn-log <LRN|ERR|FEAT> <category> <summary>"
+        return 1
+      fi
+      _pcp_curl -X POST "${PCP_API}/agents/d89cd20e-86ce-4941-be46-45916b48dfd9/wakeup" \
+        -d "{\"source\":\"on_demand\",\"reason\":\"Log learning: node /app/scripts/learnings.mjs log ${type} ${category} ${summary}\",\"forceFreshSession\":true}" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+run_id = data.get('id', data.get('runId', '?'))
+print(f'📝 Learning sendo logado via SRE Monitor. Run: {run_id[:12]}...')
+" 2>/dev/null
+      ;;
+
+    learn-list)
+      _pcp_curl "${PCP_API}/agents/d89cd20e-86ce-4941-be46-45916b48dfd9/wakeup" \
+        -X POST \
+        -d '{"source":"on_demand","reason":"Run: node /app/scripts/learnings.mjs list --limit 10 and return the output","forceFreshSession":true}' | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+run_id = data.get('id', data.get('runId', '?'))
+print(f'📋 Buscando learnings via SRE Monitor. Run: {run_id[:12]}...')
+print(f'   Consulte em 30s com: pcp run-log {run_id}')
+" 2>/dev/null
+      ;;
+
+    learn-stats)
+      _pcp_curl "${PCP_API}/agents/d89cd20e-86ce-4941-be46-45916b48dfd9/wakeup" \
+        -X POST \
+        -d '{"source":"on_demand","reason":"Run: node /app/scripts/learnings.mjs stats and return the full output","forceFreshSession":true}' | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+run_id = data.get('id', data.get('runId', '?'))
+print(f'📊 Buscando stats de learnings. Run: {run_id[:12]}...')
+print(f'   Consulte em 30s com: pcp run-log {run_id}')
+" 2>/dev/null
+      ;;
+
+    learn-search)
+      local keyword="$*"
+      _pcp_curl "${PCP_API}/agents/d89cd20e-86ce-4941-be46-45916b48dfd9/wakeup" \
+        -X POST \
+        -d "{\"source\":\"on_demand\",\"reason\":\"Run: node /app/scripts/learnings.mjs search ${keyword} and return the output\",\"forceFreshSession\":true}" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+run_id = data.get('id', data.get('runId', '?'))
+print(f'🔍 Buscando learnings com \"{keyword}\". Run: {run_id[:12]}...')
+print(f'   Consulte em 30s com: pcp run-log {run_id}')
+" 2>/dev/null
+      ;;
+
     *)
       echo "Paperclip CLI — Comandos disponíveis:"
       echo ""
@@ -193,6 +250,12 @@ else:
       echo "  pcp trigger-routine <id>          Executar rotina manualmente"
       echo "  pcp wakeup <agentId> \"msg\"        Delegar tarefa para agente"
       echo "  pcp cancel <runId>                Cancelar run"
+      echo ""
+      echo "  Learnings (Self-Improving):"
+      echo "  pcp learn-log <LRN|ERR|FEAT> <cat> <msg>  Logar learning"
+      echo "  pcp learn-list                             Listar recentes"
+      echo "  pcp learn-stats                            Estatísticas"
+      echo "  pcp learn-search <keyword>                 Buscar"
       ;;
   esac
 }

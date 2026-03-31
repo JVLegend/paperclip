@@ -124,6 +124,10 @@ SERVER_PID=$!
     echo "[railway-init] Creating board API key for programmatic setup..."
     node /app/scripts/create-board-key.mjs 2>&1
   fi
+
+  # Initialize learnings table (self-improving agent system)
+  echo "[railway-init] Initializing learnings DB..."
+  node /app/scripts/learnings.mjs init 2>&1
 ) &
 
 wait $SERVER_PID
