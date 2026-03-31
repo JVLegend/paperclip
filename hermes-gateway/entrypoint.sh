@@ -77,5 +77,15 @@ if [ -n "${HERMES_SUPERPERSONA_CONTENT}" ]; then
   echo "${HERMES_SUPERPERSONA_CONTENT}" | base64 -d > "${HERMES_HOME}/skills/productivity/jv-superpersona/SKILL.md"
 fi
 
-echo "[hermes-gateway] Starting Hermes gateway..."
-exec hermes gateway run --replace
+echo "[hermes-gateway] Config contents:"
+cat "${HERMES_HOME}/config.yaml"
+echo ""
+echo "[hermes-gateway] .env contents (redacted):"
+cat "${HERMES_HOME}/.env" | sed 's/=.*/=***REDACTED***/'
+echo ""
+echo "[hermes-gateway] SOUL.md exists: $(test -f ${HERMES_HOME}/SOUL.md && echo 'yes' || echo 'no')"
+echo "[hermes-gateway] Skills:"
+ls -la "${HERMES_HOME}/skills/productivity/" 2>/dev/null
+echo ""
+echo "[hermes-gateway] Starting Hermes gateway (verbose)..."
+exec hermes gateway run --replace -v
