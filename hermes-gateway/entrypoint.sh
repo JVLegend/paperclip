@@ -40,6 +40,8 @@ agent:
   max_turns: 60
   verbose: false
   reasoning_effort: medium
+  language: pt-br
+  system_suffix: "IMPORTANTE: Sempre pense e responda em português brasileiro. Todos os seus pensamentos internos, raciocínios e respostas devem ser em pt-BR."
 memory:
   memory_enabled: true
   user_profile_enabled: true
