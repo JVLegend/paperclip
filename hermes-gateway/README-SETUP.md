@@ -56,8 +56,9 @@ SETUP_API_KEY=sk-setup-<gerar qualquer string>
 # Vault (clonar SuperJV no container)
 GITHUB_TOKEN=<GitHub PAT com acesso ao repo SuperJV>
 
-# Hermes Agent (para hermes_local adapter executar)
-KIMI_API_KEY=<chave sk-kimi-...>
+# Hermes Agent — LLM (Gemini padrão, Kimi fallback)
+GOOGLE_API_KEY=<chave AIza...>
+# KIMI_API_KEY=<chave sk-kimi-...>  # fallback se GOOGLE_API_KEY não setada
 
 # SOUL e SuperPersona (para agents dentro do container)
 HERMES_SOUL_CONTENT=<base64 do SOUL.md>
@@ -92,7 +93,8 @@ railway up --service <claudinho-service-id>
 ### Variáveis — hermes-claudiohermes (@claudiohermesbot)
 ```env
 TELEGRAM_BOT_TOKEN=<token do @claudiohermesbot via BotFather>
-KIMI_API_KEY=<chave sk-kimi-...>
+GOOGLE_API_KEY=<chave AIza...>
+# KIMI_API_KEY=<chave sk-kimi-...>  # fallback
 HERMES_SOUL_CONTENT=<base64 de SOUL-claudiohermes.md>
 HERMES_SUPERPERSONA_CONTENT=<base64 da skill jv-superpersona>
 GATEWAY_ALLOW_ALL_USERS=true
@@ -104,7 +106,8 @@ PAPERCLIP_COMPANY_ID=<Company ID da org JV AI Labs>
 ### Variáveis — hermes-claudinho (@claudinhojvbot)
 ```env
 TELEGRAM_BOT_TOKEN=<token do @claudinhojvbot via BotFather>
-KIMI_API_KEY=<chave sk-kimi-...>
+GOOGLE_API_KEY=<chave AIza...>
+# KIMI_API_KEY=<chave sk-kimi-...>  # fallback
 HERMES_SOUL_CONTENT=<base64 de SOUL-claudinho.md>
 HERMES_SUPERPERSONA_CONTENT=<base64 da skill jv-superpersona>
 GATEWAY_ALLOW_ALL_USERS=true
@@ -221,7 +224,7 @@ node server/dist/index.js
 # 2. Gateway (em outro terminal)
 pip install "git+https://github.com/NousResearch/hermes-agent.git@main" python-telegram-bot
 export TELEGRAM_BOT_TOKEN="..."
-export KIMI_API_KEY="..."
+export GOOGLE_API_KEY="AIza..."  # ou KIMI_API_KEY="sk-kimi-..."
 # Copiar SOUL e config
 bash hermes-gateway/entrypoint.sh
 ```
@@ -274,12 +277,12 @@ learn-stats
 |---|---|
 | Bot não responde no Telegram | Verificar logs: `railway logs --service <id>`. Verificar TELEGRAM_BOT_TOKEN. |
 | 409 Conflict no Telegram | Dois processos no mesmo token. O `--replace` resolve. Aguardar redeploy. |
-| Agent `adapter_failed` | Verificar: (1) vault clonado em `/paperclip/vault/SuperJV`, (2) KIMI_API_KEY setada, (3) AGENTS.md path correto |
-| Kimi API auth error | Base URL deve ser `api.kimi.com/coding/v1` (NÃO `api.moonshot.ai`). Key começa com `sk-kimi-`. |
+| Agent `adapter_failed` | Verificar: (1) vault clonado em `/paperclip/vault/SuperJV`, (2) GOOGLE_API_KEY ou KIMI_API_KEY setada, (3) AGENTS.md path correto |
+| LLM API auth error | Gemini: GOOGLE_API_KEY começa com `AIza`. Kimi (fallback): `api.kimi.com/coding/v1`, key `sk-kimi-`. |
 | Vault não clonado | Verificar GITHUB_TOKEN no serviço jv-paperclip. Token precisa de acesso ao repo JVLegend/SuperJV. |
 | Learnings não funciona | Verificar se `node /app/scripts/learnings.mjs init` rodou (veja logs do startup). |
 | python-telegram-bot missing | Já incluído no Dockerfile. Se erro persistir, rebuild a imagem. |
 
 ---
 
-*Última atualização: 31/03/2026*
+*Última atualização: 13/04/2026 — migrado de Kimi para Gemini como LLM padrão*

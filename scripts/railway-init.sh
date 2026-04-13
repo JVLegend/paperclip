@@ -14,12 +14,30 @@ HERMES_HOME="${HOME}/.hermes"
 echo "[railway-init] Setting up Hermes config..."
 mkdir -p "${HERMES_HOME}/skills/productivity/jv-superpersona"
 
+# Detect LLM provider: Gemini (default) or Kimi (fallback)
+if [ -n "${GOOGLE_API_KEY}" ]; then
+  LLM_MODEL="${HERMES_MODEL:-gemini-2.5-flash}"
+  LLM_PROVIDER="google"
+  LLM_BASE_URL="${GOOGLE_BASE_URL:-https://generativelanguage.googleapis.com/v1beta}"
+  echo "[railway-init] LLM: Gemini (${LLM_MODEL})"
+elif [ -n "${KIMI_API_KEY}" ]; then
+  LLM_MODEL="${HERMES_MODEL:-kimi-k2.5}"
+  LLM_PROVIDER="kimi-coding"
+  LLM_BASE_URL="${KIMI_BASE_URL:-https://api.kimi.com/coding/v1}"
+  echo "[railway-init] LLM: Kimi (${LLM_MODEL})"
+else
+  LLM_MODEL="gemini-2.5-flash"
+  LLM_PROVIDER="google"
+  LLM_BASE_URL="https://generativelanguage.googleapis.com/v1beta"
+  echo "[railway-init] WARNING: No API key found, defaulting to Gemini config"
+fi
+
 # Write minimal Hermes config for agent execution (no gateway, just hermes chat)
-cat > "${HERMES_HOME}/config.yaml" << 'HERMESCONFIG'
+cat > "${HERMES_HOME}/config.yaml" << HERMESCONFIG
 model:
-  default: kimi-k2.5
-  provider: kimi-coding
-  base_url: https://api.kimi.com/coding/v1
+  default: ${LLM_MODEL}
+  provider: ${LLM_PROVIDER}
+  base_url: ${LLM_BASE_URL}
 toolsets:
 - hermes-cli
 agent:
@@ -34,12 +52,16 @@ memory:
   memory_enabled: false
 HERMESCONFIG
 
-# Write .env with KIMI_API_KEY for hermes agent execution
-if [ -n "${KIMI_API_KEY}" ]; then
-  cat > "${HERMES_HOME}/.env" << ENVFILE
+# Write .env with API keys for hermes agent execution
+cat > "${HERMES_HOME}/.env" << ENVFILE
+GOOGLE_API_KEY=${GOOGLE_API_KEY}
 KIMI_API_KEY=${KIMI_API_KEY}
 ENVFILE
-  echo "[railway-init] KIMI_API_KEY written to .env"
+echo "[railway-init] API keys written to .env"
+
+# GitHub CLI auth
+if [ -n "${GITHUB_TOKEN}" ]; then
+  echo "${GITHUB_TOKEN}" | gh auth login --with-token 2>/dev/null && echo "[railway-init] gh CLI authenticated." || echo "[railway-init] gh auth failed (non-blocking)."
 fi
 
 # Write SOUL.md (base64-encoded env var)
@@ -126,7 +148,7 @@ cp "${HERMES_HOME}/config.yaml" "${RECOVERY_DIR}/hermes-config.yaml" 2>/dev/null
 cp "${HERMES_HOME}/SOUL.md" "${RECOVERY_DIR}/SOUL-paperclip.md" 2>/dev/null || true
 
 # Snapshot env vars (redacted) for reference
-env | grep -E "^(PAPERCLIP_|DATABASE_|KIMI_|GITHUB_|SETUP_|BETTER_AUTH|SERVE_UI|PORT)" \
+env | grep -E "^(PAPERCLIP_|DATABASE_|KIMI_|GOOGLE_|GITHUB_|SETUP_|BETTER_AUTH|SERVE_UI|PORT)" \
   | sed 's/=.*/=<REDACTED>/' > "${RECOVERY_DIR}/env-vars-reference.txt" 2>/dev/null || true
 
 # Timestamp

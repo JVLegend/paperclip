@@ -12,12 +12,28 @@ if [ -d /hermes-skills/paperclip-bridge ]; then
   echo "[hermes-gateway] paperclip-bridge skill installed."
 fi
 
+# Detect LLM provider: Gemini (default) or Kimi (fallback)
+if [ -n "${GOOGLE_API_KEY}" ]; then
+  LLM_MODEL="${HERMES_MODEL:-gemini-2.5-flash}"
+  LLM_PROVIDER="google"
+  LLM_BASE_URL="${GOOGLE_BASE_URL:-https://generativelanguage.googleapis.com/v1beta}"
+  echo "[hermes-gateway] LLM: Gemini (${LLM_MODEL})"
+elif [ -n "${KIMI_API_KEY}" ]; then
+  LLM_MODEL="${HERMES_MODEL:-kimi-k2.5}"
+  LLM_PROVIDER="kimi-coding"
+  LLM_BASE_URL="${KIMI_BASE_URL:-https://api.kimi.com/coding/v1}"
+  echo "[hermes-gateway] LLM: Kimi (${LLM_MODEL})"
+else
+  echo "[hermes-gateway] ERRO: nenhuma API key encontrada (GOOGLE_API_KEY ou KIMI_API_KEY)"
+  exit 1
+fi
+
 echo "[hermes-gateway] Writing config..."
 cat > "${HERMES_HOME}/config.yaml" << HERMESCONFIG
 model:
-  default: kimi-k2.5
-  provider: kimi-coding
-  base_url: ${KIMI_BASE_URL:-https://api.kimi.com/coding/v1}
+  default: ${LLM_MODEL}
+  provider: ${LLM_PROVIDER}
+  base_url: ${LLM_BASE_URL}
 toolsets:
 - hermes-cli
 agent:
@@ -57,13 +73,19 @@ platform_toolsets:
 group_sessions_per_user: true
 HERMESCONFIG
 
-# Write .env for KIMI_API_KEY (hermes reads from ~/.hermes/.env)
+# Write .env for API keys (hermes reads from ~/.hermes/.env)
 cat > "${HERMES_HOME}/.env" << ENVFILE
+GOOGLE_API_KEY=${GOOGLE_API_KEY}
 KIMI_API_KEY=${KIMI_API_KEY}
 PAPERCLIP_API_URL=${PAPERCLIP_API_URL:-https://jv-paperclip-production.up.railway.app/api}
 PAPERCLIP_API_KEY=${PAPERCLIP_API_KEY:-pcp_board_setup_bc5dce235ce5166620bd3d15061636c87fa1be6a3d4298a6}
 PAPERCLIP_COMPANY_ID=${PAPERCLIP_COMPANY_ID:-6da87f11-6a27-4627-b101-924d5a161f6e}
 ENVFILE
+
+# GitHub CLI auth (uses GITHUB_TOKEN env var automatically)
+if [ -n "${GITHUB_TOKEN}" ]; then
+  echo "${GITHUB_TOKEN}" | gh auth login --with-token 2>/dev/null && echo "[hermes-gateway] gh CLI authenticated." || echo "[hermes-gateway] gh auth failed (non-blocking)."
+fi
 
 # SOUL.md — orchestrator persona (base64-encoded)
 if [ -n "${HERMES_SOUL_CONTENT}" ]; then
