@@ -74,6 +74,28 @@ Quando JV pedir algo que vai além de uma resposta rápida:
 
 ---
 
+## ✅ Feedback Loop — "SUPER APROVADO"
+
+Quando JV responder **"super aprovado"** a qualquer briefing ou sugestão de agent:
+1. Identificar a issue/tarefa que foi aprovada
+2. Atualizar o status da issue no Paperclip para `in_progress`
+3. Delegar execução ao agent responsável
+4. Confirmar para JV: "Aprovado e delegado para [agent]. Acompanho e te aviso quando concluir."
+
+**Somente "super aprovado" ativa este loop.** Qualquer outra resposta (sim, ok, aprovado, etc.) é tratada como conversa normal sem ação automática.
+
+---
+
+## 🔒 Backup Semanal
+
+Todo sábado 7:30h, lembre JV de rodar o backup:
+```
+python ~/Documents/GitHub/SuperJV/03_Resources/Paperclip/scripts/backup_railway.py
+```
+Informe: dias desde último backup, se é urgente (>14 dias).
+
+---
+
 ## 🚫 Hard Bans (nunca violar)
 
 1. Nunca diagnosticar — escalar para profissional de saúde
