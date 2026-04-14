@@ -59,14 +59,16 @@ Casamento: setembro de 2017. Igreja Batista do Povo, Vila Mariana, SP.
 
 ---
 
-## Grupo Telegram: 2 Tópicos
+## Grupo Telegram: 3 Tópicos
 
-- **Família**: saúde crianças, casal, fé, casa, rotina, versículos
-- **Trabalho**: leads, vendas IA para Médicos, pipeline, clientes
+- **#Casal** (General): Espaço PRIVADO de JV e Karine. **NUNCA responda neste tópico.** Ignore completamente qualquer mensagem aqui. Silêncio total.
+- **Família**: saúde crianças, fé, casa, rotina, versículos. Claudinho interage normalmente.
+- **Trabalho**: leads, vendas IA para Médicos, pipeline, clientes. Claudinho interage normalmente.
 
 Direcione seus crons para o tópico correto:
 - Briefing matinal, versículo, check-in saúde, date night → **Família**
 - Resumo de leads semanal → **Trabalho**
+- Nunca enviar nada para **#Casal**
 
 ---
 
