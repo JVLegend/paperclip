@@ -95,6 +95,83 @@ platform_toolsets:
 group_sessions_per_user: true
 HERMESCONFIG
 
+# ── Cron jobs (persistent in volume, seed only if empty) ──────────────────────
+CRON_DIR="${HERMES_HOME}/cron"
+mkdir -p "${CRON_DIR}/output"
+if [ ! -f "${CRON_DIR}/jobs.json" ]; then
+  echo "[hermes-gateway] Seeding cron jobs..."
+  cat > "${CRON_DIR}/jobs.json" << 'CRONJOBS'
+[
+  {
+    "id": "cron-strategy",
+    "name": "Estrategia diaria",
+    "schedule": "0 11 * * *",
+    "prompt": "Leia meu TELOS, Visao.md e kanban.json. Me dê um briefing estratégico: 1 insight sobre alinhamento projetos-visão, 1 risco identificado, 1 sugestão de priorização para hoje. Termine com as 3 ações mais urgentes.",
+    "skills": ["jv-superpersona"],
+    "enabled": true,
+    "created_at": "2026-04-14T14:00:00Z"
+  },
+  {
+    "id": "cron-conteudo",
+    "name": "Conteudo diario",
+    "schedule": "0 10 * * *",
+    "prompt": "Gere conteúdo diário para JV: 1 post LinkedIn (1200-1800 chars, tom profissional IA+medicina), 1 roteiro Reel/Short (30-60s com hook+CTA), 1 legenda Instagram. Use os jargões: Rumo ao topo, Direto ao ponto. Temas: IA Médica, empreendedorismo, liderança cristã.",
+    "skills": ["jv-superpersona"],
+    "enabled": true,
+    "created_at": "2026-04-14T14:00:00Z"
+  },
+  {
+    "id": "cron-grants",
+    "name": "Grants report",
+    "schedule": "0 10 * * 2,5",
+    "prompt": "Relatório de grants: 1) Status dos grants submetidos (AI4PG, PIPE FAPESP, IANAS). 2) Novos editais relevantes para IA+saúde. 3) Alertas de prazo <30 dias. 4) Se algum deadline <7 dias, marcar como URGENTE. Grants ativos: Google.org $3M (17/04), Wellcome £3.5M (22/09), Climate Change AI $150K (15/09), Prêmio Jovem Cientista R$35K (31/07).",
+    "skills": ["grant-tracker"],
+    "enabled": true,
+    "created_at": "2026-04-14T14:00:00Z"
+  },
+  {
+    "id": "cron-produtos",
+    "name": "Daily brief produtos",
+    "schedule": "15 10 * * *",
+    "prompt": "Briefing de produtos: status dos projetos ativos (SmartLab, PacienteAlerta, AEO Doctors, K2A, VagasMedicas). O que avançou ontem? O que está bloqueado? Qual o próximo milestone de cada?",
+    "skills": ["jv-superpersona"],
+    "enabled": true,
+    "created_at": "2026-04-14T14:00:00Z"
+  },
+  {
+    "id": "cron-saude",
+    "name": "Saude familiar",
+    "schedule": "30 10 * * *",
+    "prompt": "Check-in saúde familiar: lembrar JV de exercícios (4x/semana calistenia+caminhada), sono 7-8h, peso 75-80kg. ALERTA CRÍTICO: Benjamin tem G6PD — dipirona é PROIBIDA. Perguntar como estão Amanda, Rebecca e Benjamin. Lembrar de date night semanal com Karine.",
+    "skills": ["jv-superpersona"],
+    "enabled": true,
+    "created_at": "2026-04-14T14:00:00Z"
+  },
+  {
+    "id": "cron-prospeccao",
+    "name": "Doctor prospection",
+    "schedule": "0 */3 * * *",
+    "prompt": "Prospectar 15 médicos/clínicas sem website em São Paulo via Overpass API. Rotacionar entre: Jardins, Moema, Itaim Bibi, Vila Mariana, Pinheiros, Santana, Tatuapé. Para cada lead sem site, gerar rascunho de cold email oferecendo Site Premium (R$3.500-8.000) e AEO Doctors (R$3.490+/mês). NÃO enviar emails — só gerar rascunhos para minha revisão.",
+    "skills": ["doctor-prospector"],
+    "enabled": true,
+    "created_at": "2026-04-14T14:00:00Z"
+  },
+  {
+    "id": "cron-gene-check",
+    "name": "AMR Gene Check",
+    "schedule": "0 13 * * 1",
+    "prompt": "Status do SmartLab pipeline: quantos dos 12 genes AMR foram processados? (mecA, blaKPC, blaNDM, vanA, mcr-1, blaCTX-M-15 = 6 completos). Quais faltam? Qual o próximo batch? Lembrar: pre-print bioRxiv planejado para Q3 2026.",
+    "skills": ["jv-superpersona"],
+    "enabled": true,
+    "created_at": "2026-04-14T14:00:00Z"
+  }
+]
+CRONJOBS
+  echo "[hermes-gateway] $(cat ${CRON_DIR}/jobs.json | python3 -c 'import sys,json; print(f"{len(json.load(sys.stdin))} cron jobs seeded")')"
+else
+  echo "[hermes-gateway] Cron jobs already exist ($(cat ${CRON_DIR}/jobs.json | python3 -c 'import sys,json; print(f"{len(json.load(sys.stdin))} jobs")' 2>/dev/null || echo 'file exists'))"
+fi
+
 # Write .env for API keys (hermes reads from ~/.hermes/.env)
 cat > "${HERMES_HOME}/.env" << ENVFILE
 GOOGLE_API_KEY=${GOOGLE_API_KEY}
