@@ -24,11 +24,23 @@ for skill_dir in /hermes-skills/*/; do
 done
 chmod +x "${HERMES_HOME}/skills/productivity/paperclip-bridge/pcp.sh" 2>/dev/null
 
-# Detect LLM provider: Gemini (default) or Kimi (fallback)
-if [ -n "${GOOGLE_API_KEY}" ]; then
+# Detect LLM provider: DGX (primary) → Gemini (secondary) → Kimi (fallback)
+if [ -n "${DGX_SECRET_KEY}" ] && [ -n "${DGX_BASE_URL}" ]; then
+  export LLM_MODEL="${HERMES_MODEL:-gemma4:27b}"
+  export LLM_PROVIDER="custom_openai"
+  export LLM_BASE_URL="${DGX_BASE_URL}"
+  export LLM_API_KEY="${DGX_SECRET_KEY}"
+  export HERMES_MODEL="${LLM_MODEL}"
+  export HERMES_PROVIDER="custom_openai"
+  export HERMES_INFERENCE_PROVIDER="dgx"
+  # litellm picks this up for custom_openai
+  export OPENAI_API_KEY="${DGX_SECRET_KEY}"
+  echo "[hermes-gateway] LLM: DGX/Gemma4 (${LLM_MODEL}) @ ${DGX_BASE_URL}"
+elif [ -n "${GOOGLE_API_KEY}" ]; then
   export LLM_MODEL="${HERMES_MODEL:-gemini-2.0-flash}"
   export LLM_PROVIDER="google"
   export LLM_BASE_URL="${GOOGLE_BASE_URL:-https://generativelanguage.googleapis.com/v1beta}"
+  export LLM_API_KEY="${GOOGLE_API_KEY}"
   export HERMES_MODEL="${LLM_MODEL}"
   export HERMES_PROVIDER="google"
   export HERMES_INFERENCE_PROVIDER="gemini"
@@ -37,12 +49,13 @@ elif [ -n "${KIMI_API_KEY}" ]; then
   export LLM_MODEL="${HERMES_MODEL:-kimi-k2.5}"
   export LLM_PROVIDER="kimi-coding"
   export LLM_BASE_URL="${KIMI_BASE_URL:-https://api.kimi.com/coding/v1}"
+  export LLM_API_KEY="${KIMI_API_KEY}"
   export HERMES_MODEL="${LLM_MODEL}"
   export HERMES_PROVIDER="kimi-coding"
   export HERMES_INFERENCE_PROVIDER="kimi"
   echo "[hermes-gateway] LLM: Kimi (${LLM_MODEL})"
 else
-  echo "[hermes-gateway] ERRO: nenhuma API key encontrada (GOOGLE_API_KEY ou KIMI_API_KEY)"
+  echo "[hermes-gateway] ERRO: nenhuma API key encontrada (DGX_SECRET_KEY, GOOGLE_API_KEY ou KIMI_API_KEY)"
   exit 1
 fi
 
@@ -52,6 +65,7 @@ model:
   default: ${LLM_MODEL}
   provider: ${LLM_PROVIDER}
   base_url: ${LLM_BASE_URL}
+  api_key: ${LLM_API_KEY}
 toolsets:
 - hermes-cli
 agent:
@@ -230,9 +244,9 @@ fi
 cat > "${HERMES_HOME}/.env" << ENVFILE
 GOOGLE_API_KEY=${GOOGLE_API_KEY}
 KIMI_API_KEY=${KIMI_API_KEY}
-PAPERCLIP_API_URL=${PAPERCLIP_API_URL:-https://jv-paperclip-production.up.railway.app/api}
-PAPERCLIP_API_KEY=${PAPERCLIP_API_KEY:-pcp_board_setup_bc5dce235ce5166620bd3d15061636c87fa1be6a3d4298a6}
-PAPERCLIP_COMPANY_ID=${PAPERCLIP_COMPANY_ID:-6da87f11-6a27-4627-b101-924d5a161f6e}
+DGX_SECRET_KEY=${DGX_SECRET_KEY}
+DGX_BASE_URL=${DGX_BASE_URL}
+OPENAI_API_KEY=${OPENAI_API_KEY:-${DGX_SECRET_KEY}}
 ENVFILE
 
 # GitHub CLI auth (uses GITHUB_TOKEN env var automatically)
