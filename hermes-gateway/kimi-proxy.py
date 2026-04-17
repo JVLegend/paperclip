@@ -25,14 +25,15 @@ class KimiProxyHandler(BaseHTTPRequestHandler):
         length = int(self.headers.get("Content-Length", 0))
         body   = self.rfile.read(length)
 
-        # Modifica temperature no body JSON
+        # Força temperature=0.6 no body JSON (adiciona se ausente)
         try:
             data = json.loads(body)
-            if "temperature" in data:
-                data["temperature"] = FORCED_TEMP
+            old_temp = data.get("temperature", "<missing>")
+            data["temperature"] = FORCED_TEMP
             body = json.dumps(data).encode()
-        except Exception:
-            pass
+            print(f"[kimi-proxy] {self.path} temp: {old_temp} → {FORCED_TEMP}", flush=True)
+        except Exception as e:
+            print(f"[kimi-proxy] JSON parse failed: {e}", flush=True)
 
         # Monta URL real
         target = KIMI_BASE_URL.rstrip("/") + self.path

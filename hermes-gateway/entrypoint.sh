@@ -37,14 +37,14 @@ if [ -n "${DGX_SECRET_KEY}" ] && [ -n "${DGX_BASE_URL}" ]; then
   echo "[hermes-gateway] LLM: DGX/Gemma4 (${LLM_MODEL}) @ ${DGX_BASE_URL}"
 elif [ -n "${KIMI_API_KEY}" ]; then
   export LLM_MODEL="${HERMES_MODEL:-kimi-k2.6-code-preview}"
-  export KIMI_REAL_URL="${KIMI_BASE_URL:-https://api.kimi.com/coding/v1}"
+  # Proxy strips /v1 prefix, forwards to https://api.kimi.com/coding/v1
+  export KIMI_REAL_URL="https://api.kimi.com"
   export KIMI_PROXY_PORT="18888"
   export KIMI_FORCED_TEMPERATURE="0.6"
-  # Start temperature proxy in background
   python3 /kimi-proxy.py &
   sleep 1
   export LLM_PROVIDER="kimi-coding"
-  export LLM_BASE_URL="http://127.0.0.1:${KIMI_PROXY_PORT}/v1"
+  export LLM_BASE_URL="http://127.0.0.1:${KIMI_PROXY_PORT}/coding/v1"
   export LLM_API_KEY="${KIMI_API_KEY}"
   export LLM_TEMPERATURE="0.6"
   export HERMES_MODEL="${LLM_MODEL}"
