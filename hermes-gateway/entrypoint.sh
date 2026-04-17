@@ -36,14 +36,15 @@ if [ -n "${DGX_SECRET_KEY}" ] && [ -n "${DGX_BASE_URL}" ]; then
   export OPENAI_API_KEY="${DGX_SECRET_KEY}"
   echo "[hermes-gateway] LLM: DGX/Gemma4 (${LLM_MODEL}) @ ${DGX_BASE_URL}"
 elif [ -n "${KIMI_API_KEY}" ]; then
-  export LLM_MODEL="${HERMES_MODEL:-kimi-k2-5}"
+  export LLM_MODEL="${HERMES_MODEL:-kimi-k2.6-code-preview}"
   export LLM_PROVIDER="kimi-coding"
   export LLM_BASE_URL="${KIMI_BASE_URL:-https://api.kimi.com/coding/v1}"
   export LLM_API_KEY="${KIMI_API_KEY}"
+  export LLM_TEMPERATURE="0.6"
   export HERMES_MODEL="${LLM_MODEL}"
   export HERMES_PROVIDER="kimi-coding"
   export HERMES_INFERENCE_PROVIDER="kimi"
-  echo "[hermes-gateway] LLM: Kimi (${LLM_MODEL})"
+  echo "[hermes-gateway] LLM: Kimi (${LLM_MODEL}) temp=0.6"
 elif [ -n "${GOOGLE_API_KEY}" ]; then
   export LLM_MODEL="${HERMES_MODEL:-gemini-2.0-flash}"
   export LLM_PROVIDER="google"
@@ -65,6 +66,7 @@ model:
   provider: ${LLM_PROVIDER}
   base_url: ${LLM_BASE_URL}
   api_key: ${LLM_API_KEY}
+  temperature: ${LLM_TEMPERATURE:-0.7}
 toolsets:
 - hermes-cli
 agent:
