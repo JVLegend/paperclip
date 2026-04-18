@@ -119,137 +119,177 @@ platform_toolsets:
 group_sessions_per_user: true
 HERMESCONFIG
 
-# ── Cron jobs (persistent in volume, seed only if empty) ──────────────────────
+# ── Cron jobs (persistent in volume, seeded via hermes API) ────────────────────
 # Detect which bot this is: claudinho (família) vs claudiohermes (trabalho)
 CRON_DIR="${HERMES_HOME}/cron"
 mkdir -p "${CRON_DIR}/output"
 SERVICE_NAME="${RAILWAY_SERVICE_NAME:-unknown}"
 
-# Force re-seed if HERMES_FORCE_CRON_RESEED=true (one-time fix for stale crons)
-if [ "${HERMES_FORCE_CRON_RESEED}" = "true" ]; then
-  rm -f "${CRON_DIR}/jobs.json"
-  echo "[hermes-gateway] Force cron reseed requested"
-fi
+# Decide if we need to seed. Reseed when:
+#  - jobs.json doesn't exist
+#  - HERMES_FORCE_CRON_RESEED=true
+#  - jobs.json is malformed (old format: bare array instead of {"jobs":[...]})
+#  - jobs.json has 0 jobs
+NEEDS_SEED="false"
 if [ ! -f "${CRON_DIR}/jobs.json" ]; then
-  echo "[hermes-gateway] Seeding cron jobs for ${SERVICE_NAME}..."
+  NEEDS_SEED="true"
+elif [ "${HERMES_FORCE_CRON_RESEED}" = "true" ]; then
+  rm -f "${CRON_DIR}/jobs.json"
+  NEEDS_SEED="true"
+  echo "[hermes-gateway] Force cron reseed requested"
+else
+  JOB_COUNT=$(python3 -c "
+import json, sys
+try:
+    d = json.load(open('${CRON_DIR}/jobs.json'))
+    jobs = d.get('jobs', []) if isinstance(d, dict) else []
+    print(len(jobs))
+except Exception:
+    print(0)
+" 2>/dev/null || echo "0")
+  if [ "${JOB_COUNT}" = "0" ]; then
+    echo "[hermes-gateway] jobs.json empty or malformed (old format) — reseeding"
+    rm -f "${CRON_DIR}/jobs.json"
+    NEEDS_SEED="true"
+  else
+    echo "[hermes-gateway] Cron jobs already exist (${JOB_COUNT} jobs)"
+  fi
+fi
+
+if [ "${NEEDS_SEED}" = "true" ]; then
+  echo "[hermes-gateway] Seeding cron jobs for ${SERVICE_NAME} via hermes API..."
 
   if echo "$SERVICE_NAME" | grep -qi "claudinho"; then
     # ── CLAUDINHO (Família JV) ──
-    cat > "${CRON_DIR}/jobs.json" << 'CRONJOBS'
-[
-  {
-    "id": "fam-versiculo",
-    "name": "Versiculo diario",
-    "schedule": "30 9 * * *",
-    "prompt": "Bom dia, Karine! Compartilhe um versículo bíblico com uma reflexão curta e carinhosa para começar o dia. Varie os temas: gratidão, família, coragem, provisão, casamento. Tom evangélico batista. Termine com uma oração curta.",
-    "skills": ["casal-fe"],
-    "enabled": true,
-    "created_at": "2026-04-14T18:00:00Z"
-  },
-  {
-    "id": "fam-bomdia",
-    "name": "Bom dia familia",
-    "schedule": "0 10 * * *",
-    "prompt": "Briefing matinal da família Dias: 1) Medicamentos/suplementos do dia (Rebecca: vitamina D, Benjamin: verificar se precisa algo). 2) Dieta Rebecca: o que pode comer hoje (sugerir café da manhã e almoço seguros). 3) Amanda: lembrar de atividade física. 4) ALERTA: Benjamin tem G6PD — dipirona PROIBIDA. Perguntar se alguém tem consulta ou compromisso.",
-    "skills": ["saude-criancas"],
-    "enabled": true,
-    "created_at": "2026-04-14T18:00:00Z"
-  },
-  {
-    "id": "fam-checkin",
-    "name": "Check-in saude noturno",
-    "schedule": "0 22 * * *",
-    "prompt": "Boa noite família! Check-in: Como foi o dia? Amanda se exercitou? Rebecca teve alguma dor de estômago? O que ela comeu? Benjamin está bem? Algum medicamento dado hoje? Lembrar que Alivium é seguro, Novalgina NUNCA. Terminar com versículo de descanso.",
-    "skills": ["saude-criancas", "casal-fe"],
-    "enabled": true,
-    "created_at": "2026-04-14T18:00:00Z"
-  },
-  {
-    "id": "fam-datenight",
-    "name": "Date night reminder",
-    "schedule": "0 21 * * 4",
-    "prompt": "Quinta-feira! Hora de planejar o date night. Sugira um restaurante da lista que ainda não visitaram e uma ideia romântica. Pergunte se querem reservar. Use a skill casal-fe para escolher.",
-    "skills": ["casal-fe"],
-    "enabled": true,
-    "created_at": "2026-04-14T18:00:00Z"
-  },
-  {
-    "id": "fam-leads",
-    "name": "Resumo leads semanal",
-    "schedule": "0 11 * * 5",
-    "prompt": "Sexta! Resumo semanal de vendas para Karine (IA para Médicos): Quantos leads novos esta semana? Quem foi contatado? Follow-ups pendentes? Sugerir 3 ações para a próxima semana. Lembrar dos produtos: Site Premium R$3.500-8K, AEO Doctors R$3.490+/mês, Apps R$8K-58K.",
-    "skills": ["karine-vendas"],
-    "enabled": true,
-    "created_at": "2026-04-14T18:00:00Z"
-  }
-]
-CRONJOBS
-
+    SEED_PROFILE="claudinho"
   else
     # ── CLAUDIOHERMES (JV AI Labs / Trabalho) ──
-    cat > "${CRON_DIR}/jobs.json" << 'CRONJOBS'
-[
-  {
-    "id": "cron-strategy",
-    "name": "Estrategia diaria",
-    "schedule": "0 11 * * *",
-    "prompt": "Leia meu TELOS, Visao.md e kanban.json. Me dê um briefing estratégico: 1 insight sobre alinhamento projetos-visão, 1 risco identificado, 1 sugestão de priorização para hoje. Termine com as 3 ações mais urgentes.",
-    "skills": ["jv-superpersona"],
-    "enabled": true,
-    "created_at": "2026-04-14T14:00:00Z"
-  },
-  {
-    "id": "cron-conteudo",
-    "name": "Conteudo diario",
-    "schedule": "0 10 * * *",
-    "prompt": "Gere conteúdo diário para JV: 1 post LinkedIn (1200-1800 chars, tom profissional IA+medicina), 1 roteiro Reel/Short (30-60s com hook+CTA), 1 legenda Instagram. Use os jargões: Rumo ao topo, Direto ao ponto. Temas: IA Médica, empreendedorismo, liderança cristã.",
-    "skills": ["jv-superpersona"],
-    "enabled": true,
-    "created_at": "2026-04-14T14:00:00Z"
-  },
-  {
-    "id": "cron-grants",
-    "name": "Grants report",
-    "schedule": "0 10 * * 2,5",
-    "prompt": "Relatório de grants: 1) Status dos grants submetidos (AI4PG, PIPE FAPESP, IANAS). 2) Novos editais relevantes para IA+saúde. 3) Alertas de prazo <30 dias. 4) Se algum deadline <7 dias, marcar como URGENTE. Grants ativos: Google.org $3M (17/04), Wellcome £3.5M (22/09), Climate Change AI $150K (15/09), Prêmio Jovem Cientista R$35K (31/07).",
-    "skills": ["grant-tracker"],
-    "enabled": true,
-    "created_at": "2026-04-14T14:00:00Z"
-  },
-  {
-    "id": "cron-produtos",
-    "name": "Daily brief produtos",
-    "schedule": "15 10 * * *",
-    "prompt": "Briefing de produtos: status dos projetos ativos (SmartLab, PacienteAlerta, AEO Doctors, K2A, VagasMedicas). O que avançou ontem? O que está bloqueado? Qual o próximo milestone de cada?",
-    "skills": ["jv-superpersona"],
-    "enabled": true,
-    "created_at": "2026-04-14T14:00:00Z"
-  },
-  {
-    "id": "cron-prospeccao",
-    "name": "Doctor prospection",
-    "schedule": "0 */3 * * *",
-    "prompt": "Prospectar 15 médicos/clínicas sem website em São Paulo via Overpass API. Rotacionar entre: Jardins, Moema, Itaim Bibi, Vila Mariana, Pinheiros, Santana, Tatuapé. Para cada lead sem site, gerar rascunho de cold email oferecendo Site Premium (R$3.500-8.000) e AEO Doctors (R$3.490+/mês). NÃO enviar emails — só gerar rascunhos para minha revisão.",
-    "skills": ["doctor-prospector"],
-    "enabled": true,
-    "created_at": "2026-04-14T14:00:00Z"
-  },
-  {
-    "id": "cron-gene-check",
-    "name": "AMR Gene Check",
-    "schedule": "0 13 * * 1",
-    "prompt": "Status do SmartLab pipeline: quantos dos 12 genes AMR foram processados? (mecA, blaKPC, blaNDM, vanA, mcr-1, blaCTX-M-15 = 6 completos). Quais faltam? Qual o próximo batch? Lembrar: pre-print bioRxiv planejado para Q3 2026.",
-    "skills": ["jv-superpersona"],
-    "enabled": true,
-    "created_at": "2026-04-14T14:00:00Z"
-  }
-]
-CRONJOBS
+    SEED_PROFILE="claudiohermes"
   fi
 
-  echo "[hermes-gateway] $(cat ${CRON_DIR}/jobs.json | python3 -c 'import sys,json; print(f"{len(json.load(sys.stdin))} cron jobs seeded")')"
-else
-  echo "[hermes-gateway] Cron jobs already exist ($(cat ${CRON_DIR}/jobs.json | python3 -c 'import sys,json; print(f"{len(json.load(sys.stdin))} jobs")' 2>/dev/null || echo 'file exists'))"
+  HERMES_HOME="${HERMES_HOME}" SEED_PROFILE="${SEED_PROFILE}" python3 - << 'PYSEED'
+import os
+from cron.jobs import create_job
+
+profile = os.environ["SEED_PROFILE"]
+
+claudinho_jobs = [
+    dict(
+        name="Versiculo diario",
+        schedule="30 9 * * *",  # 6h30 BRT
+        prompt=("Bom dia, Karine! Compartilhe um versículo bíblico com uma reflexão curta e "
+                "carinhosa para começar o dia. Varie os temas: gratidão, família, coragem, "
+                "provisão, casamento. Tom evangélico batista. Termine com uma oração curta."),
+        skills=["casal-fe"],
+    ),
+    dict(
+        name="Bom dia familia",
+        schedule="0 10 * * *",  # 7h BRT
+        prompt=("Briefing matinal da família Dias: 1) Medicamentos/suplementos do dia "
+                "(Rebecca: vitamina D, Benjamin: verificar se precisa algo). 2) Dieta Rebecca: "
+                "o que pode comer hoje (sugerir café da manhã e almoço seguros). 3) Amanda: "
+                "lembrar de atividade física. 4) ALERTA: Benjamin tem G6PD — dipirona "
+                "PROIBIDA. Perguntar se alguém tem consulta ou compromisso."),
+        skills=["saude-criancas"],
+    ),
+    dict(
+        name="Check-in saude noturno",
+        schedule="0 22 * * *",  # 19h BRT
+        prompt=("Boa noite família! Check-in: Como foi o dia? Amanda se exercitou? Rebecca "
+                "teve alguma dor de estômago? O que ela comeu? Benjamin está bem? Algum "
+                "medicamento dado hoje? Lembrar que Alivium é seguro, Novalgina NUNCA. "
+                "Terminar com versículo de descanso."),
+        skills=["saude-criancas", "casal-fe"],
+    ),
+    dict(
+        name="Date night reminder",
+        schedule="0 21 * * 4",  # Qui 18h BRT
+        prompt=("Quinta-feira! Hora de planejar o date night. Sugira um restaurante da lista "
+                "que ainda não visitaram e uma ideia romântica. Pergunte se querem reservar. "
+                "Use a skill casal-fe para escolher."),
+        skills=["casal-fe"],
+    ),
+    dict(
+        name="Resumo leads semanal",
+        schedule="0 11 * * 5",  # Sex 8h BRT
+        prompt=("Sexta! Resumo semanal de vendas para Karine (IA para Médicos): Quantos leads "
+                "novos esta semana? Quem foi contatado? Follow-ups pendentes? Sugerir 3 ações "
+                "para a próxima semana. Lembrar dos produtos: Site Premium R$3.500-8K, "
+                "AEO Doctors R$3.490+/mês, Apps R$8K-58K."),
+        skills=["karine-vendas"],
+    ),
+]
+
+claudiohermes_jobs = [
+    dict(
+        name="Estrategia diaria",
+        schedule="0 11 * * *",  # 8h BRT
+        prompt=("Leia meu TELOS, Visao.md e kanban.json. Me dê um briefing estratégico: "
+                "1 insight sobre alinhamento projetos-visão, 1 risco identificado, 1 sugestão "
+                "de priorização para hoje. Termine com as 3 ações mais urgentes."),
+        skills=["jv-superpersona"],
+    ),
+    dict(
+        name="Conteudo diario",
+        schedule="0 10 * * *",  # 7h BRT
+        prompt=("Gere conteúdo diário para JV: 1 post LinkedIn (1200-1800 chars, tom "
+                "profissional IA+medicina), 1 roteiro Reel/Short (30-60s com hook+CTA), "
+                "1 legenda Instagram. Use os jargões: Rumo ao topo, Direto ao ponto. "
+                "Temas: IA Médica, empreendedorismo, liderança cristã."),
+        skills=["jv-superpersona"],
+    ),
+    dict(
+        name="Grants report",
+        schedule="0 10 * * 2,5",  # Ter/Sex 7h BRT
+        prompt=("Relatório de grants: 1) Status dos grants submetidos (AI4PG, PIPE FAPESP, "
+                "IANAS). 2) Novos editais relevantes para IA+saúde. 3) Alertas de prazo "
+                "<30 dias. 4) Se algum deadline <7 dias, marcar como URGENTE. Grants ativos: "
+                "Google.org $3M (17/04), Wellcome £3.5M (22/09), Climate Change AI $150K "
+                "(15/09), Prêmio Jovem Cientista R$35K (31/07)."),
+        skills=["grant-tracker"],
+    ),
+    dict(
+        name="Daily brief produtos",
+        schedule="15 10 * * *",  # 7h15 BRT
+        prompt=("Briefing de produtos: status dos projetos ativos (SmartLab, PacienteAlerta, "
+                "AEO Doctors, K2A, VagasMedicas). O que avançou ontem? O que está bloqueado? "
+                "Qual o próximo milestone de cada?"),
+        skills=["jv-superpersona"],
+    ),
+    dict(
+        name="Doctor prospection",
+        schedule="0 */3 * * *",  # a cada 3h
+        prompt=("Prospectar 15 médicos/clínicas sem website em São Paulo via Overpass API. "
+                "Rotacionar entre: Jardins, Moema, Itaim Bibi, Vila Mariana, Pinheiros, "
+                "Santana, Tatuapé. Para cada lead sem site, gerar rascunho de cold email "
+                "oferecendo Site Premium (R$3.500-8.000) e AEO Doctors (R$3.490+/mês). "
+                "NÃO enviar emails — só gerar rascunhos para minha revisão."),
+        skills=["doctor-prospector"],
+    ),
+    dict(
+        name="AMR Gene Check",
+        schedule="0 13 * * 1",  # Seg 10h BRT
+        prompt=("Status do SmartLab pipeline: quantos dos 12 genes AMR foram processados? "
+                "(mecA, blaKPC, blaNDM, vanA, mcr-1, blaCTX-M-15 = 6 completos). Quais "
+                "faltam? Qual o próximo batch? Lembrar: pre-print bioRxiv planejado para "
+                "Q3 2026."),
+        skills=["jv-superpersona"],
+    ),
+]
+
+jobs = claudinho_jobs if profile == "claudinho" else claudiohermes_jobs
+for j in jobs:
+    created = create_job(
+        prompt=j["prompt"],
+        schedule=j["schedule"],
+        name=j["name"],
+        deliver="telegram",
+        skills=j["skills"],
+    )
+    print(f"  ✓ seeded: {created['name']} ({created['schedule'].get('display','?')}) → telegram", flush=True)
+
+print(f"[hermes-gateway] {len(jobs)} cron jobs seeded (deliver=telegram)", flush=True)
+PYSEED
 fi
 
 # Write .env for API keys (hermes reads from ~/.hermes/.env)
